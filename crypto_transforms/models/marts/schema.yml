@@ -1,0 +1,37 @@
+version: 2
+
+models:
+  - name: mart_daily_prices
+    description: "One row per coin per day with rolling averages and day-over-day change"
+    columns:
+      - name: coin_id
+        tests:
+          - not_null
+      - name: price_date
+        tests:
+          - not_null
+      - name: avg_price_usd
+        tests:
+          - not_null
+      - name: rolling_7d_avg_price
+        description: "7-day rolling average of daily avg price"
+
+  - name: mart_top_movers
+    description: "Top 5 gainers and losers per day by day-over-day % change"
+    columns:
+      - name: mover_type
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["top_gainer", "top_loser", "both"]
+      - name: price_date
+        tests:
+          - not_null
+
+  - name: mart_market_dominance
+    description: "Daily BTC/ETH dominance trends joined with coin prices"
+    columns:
+      - name: market_date
+        tests:
+          - not_null
+          - unique

@@ -35,9 +35,9 @@ models:
       # views are fast to create, don't store data on disk.
       # Perfect for staging — lightweight cleaning layer.
       +materialized: view
-      # +schema: staging
+      +schema: staging
     marts:
       # tables store data on disk — slower to build but
       # fast to query. Right for mart models that get hit often.
       +materialized: table
-      # +schema: marts
+      +schema: marts
