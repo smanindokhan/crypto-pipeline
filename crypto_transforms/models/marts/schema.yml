@@ -2,36 +2,93 @@ version: 2
 
 models:
   - name: mart_daily_prices
-    description: "One row per coin per day with rolling averages and day-over-day change"
+    description: >
+      One row per coin per day. Aggregates intra-day price fetches into a
+      single daily record, then applies window functions to compute
+      day-over-day price change, 7-day rolling average, and daily market
+      cap rank across all tracked coins.
+      Built from: stg_coin_prices
     columns:
       - name: coin_id
+        description: "CoinGecko unique slug"
         tests:
           - not_null
+      - name: coin_name
+        description: "Human-readable coin name"
+        tests:
+          - not_null
+      - name: symbol
+        description: "Short ticker e.g. btc"
       - name: price_date
+        description: "The calendar date this daily record covers"
         tests:
           - not_null
       - name: avg_price_usd
+        description: "Average of all intra-day price fetches in USD"
         tests:
           - not_null
+      - name: high_price_usd
+        description: "Highest price recorded across all fetches on this date"
+      - name: low_price_usd
+        description: "Lowest price recorded across all fetches on this date"
+      - name: avg_volume_usd
+        description: "Average 24h trading volume across intra-day fetches"
+      - name: avg_market_cap_usd
+        description: "Average market cap across intra-day fetches"
+      - name: prev_day_price_usd
+        description: "This coin's avg_price_usd on the previous calendar day (LAG 1)"
+      - name: day_over_day_pct_change
+        description: "Percentage price change vs previous day. NULL on first day of data."
       - name: rolling_7d_avg_price
-        description: "7-day rolling average of daily avg price"
+        description: "7-day rolling average of avg_price_usd using ROWS BETWEEN 6 PRECEDING AND CURRENT ROW"
+      - name: daily_market_cap_rank
+        description: "Rank of this coin by market cap on this date. 1 = largest."
 
   - name: mart_top_movers
-    description: "Top 5 gainers and losers per day by day-over-day % change"
+    description: >
+      Top 5 gainers and top 5 losers per day, ranked by day_over_day_pct_change.
+      Excludes the first day of data per coin where no prior day exists.
+      Built from: mart_daily_prices
     columns:
+      - name: price_date
+        description: "The date these movers are ranked for"
+        tests:
+          - not_null
+      - name: coin_id
+        tests:
+          - not_null
       - name: mover_type
+        description: "top_gainer, top_loser, or both (near-zero change)"
         tests:
           - not_null
           - accepted_values:
               values: ["top_gainer", "top_loser", "both"]
-      - name: price_date
-        tests:
-          - not_null
+      - name: day_over_day_pct_change
+        description: "The % change that earned this coin its ranking"
+      - name: rank_position
+        description: "1 = biggest mover in its category on that day"
 
   - name: mart_market_dominance
-    description: "Daily BTC/ETH dominance trends joined with coin prices"
+    description: >
+      Daily BTC and ETH market dominance trends, joined with their actual
+      USD prices. Includes 7-day rolling average of BTC dominance and
+      day-over-day total market cap change.
+      Built from: stg_global_market and mart_daily_prices
     columns:
       - name: market_date
+        description: "Calendar date of the snapshot"
         tests:
           - not_null
           - unique
+      - name: btc_dominance_pct
+        description: "Bitcoin dominance percentage on this date"
+        tests:
+          - not_null
+      - name: btc_dominance_7d_avg
+        description: "7-day rolling average of BTC dominance"
+      - name: market_cap_day_change_pct
+        description: "Day-over-day % change in total crypto market cap. NULL on first day."
+      - name: btc_price_usd
+        description: "Bitcoin average price on this date from mart_daily_prices"
+      - name: eth_price_usd
+        description: "Ethereum average price on this date from mart_daily_prices"

@@ -2,37 +2,72 @@ version: 2
 
 models:
   - name: stg_coin_prices
-    description: "Cleaned coin price snapshots from CoinGecko /coins/markets"
+    description: >
+      Cleaned and renamed coin price snapshots from the CoinGecko
+      /coins/markets endpoint. One row per coin per fetch.
+      Nulls filtered, types cast, date column derived.
+      Source: raw.coin_prices written by ingestion/coin_prices.py
     columns:
       - name: coin_id
-        description: "CoinGecko unique id e.g. bitcoin, ethereum"
+        description: "CoinGecko unique slug e.g. bitcoin, ethereum, solana"
+        tests:
+          - not_null
+      - name: symbol
+        description: "Short ticker symbol e.g. btc, eth, sol"
+        tests:
+          - not_null
+      - name: coin_name
+        description: "Human-readable name e.g. Bitcoin, Ethereum"
         tests:
           - not_null
       - name: price_usd
-        description: "Current price in USD at time of fetch"
+        description: "Current USD price at time of fetch, cast to FLOAT"
         tests:
           - not_null
+      - name: market_cap_usd
+        description: "Total market capitalisation in USD"
+      - name: volume_usd
+        description: "24-hour trading volume in USD"
+      - name: price_change_pct_24h
+        description: "Price change percentage over the prior 24 hours from CoinGecko"
       - name: price_date
-        description: "Calendar date of the fetch, derived from fetched_at"
+        description: "Calendar date derived from fetched_at timestamp"
         tests:
           - not_null
       - name: fetched_at
-        description: "Full UTC timestamp of fetch"
+        description: "Full UTC timestamp of the API fetch, rounded to minute"
         tests:
           - not_null
 
   - name: stg_global_market
-    description: "Cleaned global crypto market snapshots"
+    description: >
+      Cleaned global crypto market snapshots from the CoinGecko /global
+      endpoint. One row per fetch. Includes total market cap, BTC and ETH
+      dominance percentages, and a derived combined dominance column.
+      Source: raw.global_market written by ingestion/global_market.py
     columns:
       - name: total_market_cap_usd
-        description: "Total crypto market cap in USD"
+        description: "Sum of all crypto market caps in USD"
         tests:
           - not_null
+      - name: total_volume_usd
+        description: "Total 24-hour trading volume across all cryptos in USD"
       - name: btc_dominance_pct
-        description: "Bitcoin market dominance as a percentage"
+        description: "Bitcoin market cap as a percentage of total crypto market cap"
+        tests:
+          - not_null
+      - name: eth_dominance_pct
+        description: "Ethereum market cap as a percentage of total crypto market cap"
+      - name: btc_eth_combined_pct
+        description: "BTC dominance + ETH dominance combined, rounded to 2dp"
+      - name: active_coins
+        description: "Total number of active cryptocurrencies tracked by CoinGecko"
+      - name: market_date
+        description: "Calendar date derived from fetched_at"
         tests:
           - not_null
       - name: fetched_at
+        description: "Full UTC timestamp of the API fetch"
         tests:
           - not_null
           - unique

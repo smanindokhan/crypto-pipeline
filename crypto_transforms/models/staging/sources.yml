@@ -4,6 +4,19 @@ sources:
   - name: raw
     description: "Raw tables written by the Python ingestion pipeline"
     schema: raw
+
+    # loaded_at_field tells dbt which column to use when
+    # checking how recently data arrived. Must be a timestamp.
+    loaded_at_field: fetched_at
+
+    # Default freshness for ALL tables in this source.
+    # warn_after: alert if no new data in 25 hours
+    # error_after: hard fail if no new data in 48 hours
+    # This gives you a 1-hour buffer on a daily pipeline.
+    freshness:
+      warn_after:  {count: 25, period: hour}
+      error_after: {count: 48, period: hour}
+
     tables:
       - name: coin_prices
         description: "Top 50 coins by market cap, fetched every day"
