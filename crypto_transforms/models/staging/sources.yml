@@ -1,0 +1,20 @@
+version: 2
+
+sources:
+  - name: raw
+    description: "Raw tables written by the Python ingestion pipeline"
+    schema: raw
+    tables:
+      - name: coin_prices
+        description: "Top 50 coins by market cap, fetched every day"
+        columns:
+          - name: coin_id
+            description: "CoinGecko unique identifier e.g. bitcoin"
+          - name: fetched_at
+            description: "UTC timestamp of the API call, rounded to minute"
+
+      - name: global_market
+        description: "Global crypto market snapshot — total cap, dominance"
+        columns:
+          - name: fetched_at
+            description: "UTC timestamp of the API call, rounded to minute"
