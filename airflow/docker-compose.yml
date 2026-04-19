@@ -1,79 +1,35 @@
-version: '3.8'
-
-# SHARED CONFIG
-# x-airflow-common is a YAML anchor — a reusable block.
-# Every service that references <<: *airflow-common inherits
-# all of these settings. Change it once, it applies everywhere.
 x-airflow-common: &airflow-common
-  # Build from our custom Dockerfile instead of pulling the plain image
   build: .
-  environment:
-    # CeleryExecutor uses Redis to distribute tasks to workers.
-    # LocalExecutor runs tasks in the scheduler process itself — simpler
-    # but can't scale. CeleryExecutor is what production uses.
-    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
-
-    # Airflow's own metadata database — separate from YOUR crypto-db
+  environment: &airflow-common-env
+    # LocalExecutor runs tasks as subprocesses in the scheduler.
+    # No Redis, no separate worker container needed.
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    # Airflow's own internal metadata database
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow
-
-    # Redis connection for Celery task queue
-    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@airflow-postgres/airflow
-    AIRFLOW__CELERY__BROKER_URL: redis://:@airflow-redis:6379/0
-
-    # Load example DAGs? No — they clutter the UI
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
-
-    # How often the scheduler checks for new DAG files (seconds)
     AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: '30'
-
-    # YOUR crypto database connection — this is how the worker
-    # knows how to connect to the database your pipeline writes to.
-    # host.docker.internal is the Windows/Mac way to reach
-    # localhost from inside a Docker container.
+    AIRFLOW__CORE__FERNET_KEY: 'ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pg='
+    AIRFLOW__WEBSERVER__SECRET_KEY: 'crypto-pipeline-secret-key-change-in-prod'
+    # Your crypto pipeline database
     CRYPTO_DB_HOST: host.docker.internal
     CRYPTO_DB_PORT: '5432'
     CRYPTO_DB_NAME: crypto_pipeline
     CRYPTO_DB_USER: postgres
     CRYPTO_DB_PASSWORD: postgres
-
-    # Fernet key encrypts sensitive values stored in Airflow's DB.
-    # This is a base64-encoded 32-byte key — fine for local dev.
-    AIRFLOW__CORE__FERNET_KEY: 'ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pg='
-
-    # Secret key for the web UI session cookies
-    AIRFLOW__WEBSERVER__SECRET_KEY: 'crypto-pipeline-secret-key-change-in-prod'
-
+    DBT_TARGET: docker
   volumes:
-    # Mount your DAGs folder into the container so Airflow sees your DAG files.
-    # ./dags maps to the dags/ folder next to this docker-compose.yml file.
     - ./dags:/opt/airflow/dags
-
-    # Mount logs so they persist after container restart
     - ./logs:/opt/airflow/logs
-
-    # Mount plugins and config (required even if empty)
     - ./plugins:/opt/airflow/plugins
     - ./config:/opt/airflow/config
-
-    # Mount your entire project into the worker container at /opt/pipeline.
-    # This is how the worker can import and run your Python ingestion code.
-    # .. means one level up from airflow/ — the project root.
     - ..:/opt/pipeline
-
-    # Mount dbt profiles so dbt can connect to your database
     - ${USERPROFILE}/.dbt:/home/airflow/.dbt:ro
-
   depends_on:
     airflow-postgres:
       condition: service_healthy
-    airflow-redis:
-      condition: service_healthy
 
-# SERVICES
 services:
 
-  # Airflow's internal PostgreSQL — NOT your crypto-db.
-  # Stores DAG definitions, task states, run history.
   airflow-postgres:
     image: postgres:15
     environment:
@@ -89,23 +45,10 @@ services:
       start_period: 5s
     restart: always
 
-  # Redis — message broker between scheduler and worker
-  airflow-redis:
-    image: redis:7.2-bookworm
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      retries: 5
-      start_period: 5s
-    restart: always
-
-  # Webserver — the UI you interact with
   airflow-webserver:
     <<: *airflow-common
     command: webserver
     ports:
-      # 8081 on your machine maps to 8080 inside the container.
-      # Avoids conflict with dbt docs on 8080.
       - "8081:8080"
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
@@ -115,7 +58,8 @@ services:
       start_period: 30s
     restart: always
 
-  # Scheduler — reads DAG files, triggers task runs
+  # With LocalExecutor the scheduler runs tasks directly —
+  # no separate worker container or Redis needed.
   airflow-scheduler:
     <<: *airflow-common
     command: scheduler
@@ -127,24 +71,6 @@ services:
       start_period: 30s
     restart: always
 
-  # Worker — executes your actual tasks (ingestion, dbt)
-  airflow-worker:
-    <<: *airflow-common
-    command: celery worker
-    healthcheck:
-      test:
-        - "CMD-SHELL"
-        - 'celery --app airflow.providers.celery.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}" || exit 1'
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
-    restart: always
-    environment:
-      DUMB_INIT_SETSID: "0"
-
-  # Init container — runs once on first startup to migrate
-  # Airflow's database and create the admin user. Then exits.
   airflow-init:
     <<: *airflow-common
     entrypoint: /bin/bash
@@ -161,6 +87,5 @@ services:
           --email airflow@example.com
     restart: on-failure
 
-# Named volume for Airflow's internal Postgres data
 volumes:
   airflow-postgres-data:

@@ -1,5 +1,82 @@
-﻿requests
-psycopg2-binary
-pandas
-python-dotenv
-dbt-postgres
+﻿(venv) E:\Projects\Pipeline Test\crypto-pipeline\airflow>docker compose logs airflow-worker --tail 80 --no-log-prefix
+time="2026-04-19T19:31:53+06:00" level=warning msg="E:\\Projects\\Pipeline Test\\crypto-pipeline\\airflow\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+                      ^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/celery/utils/nodenames.py", line 71, in nodesplit
+    parts = name.split(NODENAME_SEP, 1)
+            ^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'split'
+[2026-04-19 13:31:19 +0000] [33] [INFO] Handling signal: term
+[2026-04-19 13:31:19 +0000] [34] [INFO] Worker exiting (pid: 34)
+[2026-04-19 13:31:19 +0000] [35] [INFO] Worker exiting (pid: 35)
+[2026-04-19 13:31:20 +0000] [33] [INFO] Shutting down: Master
+
+BACKEND=redis
+DB_HOST=airflow-redis
+DB_PORT=6379
+
+[2026-04-19 13:31:41 +0000] [32] [INFO] Starting gunicorn 23.0.0
+[2026-04-19 13:31:41 +0000] [32] [INFO] Listening at: http://[::]:8793 (32)
+[2026-04-19 13:31:41 +0000] [32] [INFO] Using worker: sync
+[2026-04-19 13:31:41 +0000] [33] [INFO] Booting worker with pid: 33
+[2026-04-19 13:31:41 +0000] [34] [INFO] Booting worker with pid: 34
+Traceback (most recent call last):
+  File "/home/airflow/.local/bin/airflow", line 8, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/__main__.py", line 62, in main
+    args.func(args)
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/cli/cli_config.py", line 49, in command
+[2026-04-19 13:31:41 +0000] [32] [INFO] Handling signal: term
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/utils/cli.py", line 116, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/providers/celery/cli/celery_command.py", line 64, in wrapper
+    providers_configuration_loaded(func)(*args, **kwargs)
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/utils/providers_configuration_loader.py", line 55, in wrapped_function
+[2026-04-19 13:31:41 +0000] [33] [INFO] Worker exiting (pid: 33)
+[2026-04-19 13:31:41 +0000] [34] [INFO] Worker exiting (pid: 34)
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/providers/celery/cli/celery_command.py", line 237, in worker
+    _run_command_with_daemon_option(
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/providers/celery/cli/celery_command.py", line 50, in _run_command_with_daemon_option
+    run_command_with_daemon_option(*args, **kwargs)
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/cli/commands/daemon_utils.py", line 86, in run_command_with_daemon_option
+    callback()
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/providers/celery/cli/celery_command.py", line 230, in run_celery_worker
+    celery_app.worker_main(options)
+  File "/home/airflow/.local/lib/python3.12/site-packages/celery/app/base.py", line 391, in worker_main
+    self.start(argv=argv)
+  File "/home/airflow/.local/lib/python3.12/site-packages/celery/app/base.py", line 371, in start
+    celery.main(args=argv, standalone_mode=False)
+  File "/home/airflow/.local/lib/python3.12/site-packages/click/core.py", line 1406, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/click/core.py", line 1873, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/click/core.py", line 1269, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/click/core.py", line 824, in invoke
+    return callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/click/decorators.py", line 34, in new_func
+    return f(get_current_context(), *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/celery/bin/base.py", line 135, in caller
+    return f(ctx, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/celery/bin/worker.py", line 351, in worker
+    pidfile=node_format(pidfile, hostname),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/celery/utils/nodenames.py", line 85, in node_format
+    shortname, host = nodesplit(name)
+                      ^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/celery/utils/nodenames.py", line 71, in nodesplit
+    parts = name.split(NODENAME_SEP, 1)
+            ^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'split'
+[2026-04-19 13:31:41 +0000] [32] [INFO] Shutting down: Master
