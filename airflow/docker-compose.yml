@@ -11,14 +11,12 @@ x-airflow-common: &airflow-common
     # CeleryExecutor uses Redis to distribute tasks to workers.
     # LocalExecutor runs tasks in the scheduler process itself — simpler
     # but can't scale. CeleryExecutor is what production uses.
-    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
 
     # Airflow's own metadata database — separate from YOUR crypto-db
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow
 
     # Redis connection for Celery task queue
-    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@airflow-postgres/airflow
-    AIRFLOW__CELERY__BROKER_URL: redis://:@airflow-redis:6379/0
 
     # Load example DAGs? No — they clutter the UI
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
@@ -66,8 +64,6 @@ x-airflow-common: &airflow-common
   depends_on:
     airflow-postgres:
       condition: service_healthy
-    airflow-redis:
-      condition: service_healthy
 
 # SERVICES
 services:
@@ -89,15 +85,7 @@ services:
       start_period: 5s
     restart: always
 
-  # Redis — message broker between scheduler and worker
-  airflow-redis:
-    image: redis:7.2-bookworm
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      retries: 5
-      start_period: 5s
-    restart: always
+
 
   # Webserver — the UI you interact with
   airflow-webserver:
@@ -127,21 +115,6 @@ services:
       start_period: 30s
     restart: always
 
-  # Worker — executes your actual tasks (ingestion, dbt)
-  airflow-worker:
-    <<: *airflow-common
-    command: celery worker
-    healthcheck:
-      test:
-        - "CMD-SHELL"
-        - 'celery --app airflow.providers.celery.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}" || exit 1'
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
-    restart: always
-    environment:
-      DUMB_INIT_SETSID: "0"
 
   # Init container — runs once on first startup to migrate
   # Airflow's database and create the admin user. Then exits.
