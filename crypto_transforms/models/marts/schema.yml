@@ -43,6 +43,11 @@ models:
         description: "7-day rolling average of avg_price_usd using ROWS BETWEEN 6 PRECEDING AND CURRENT ROW"
       - name: daily_market_cap_rank
         description: "Rank of this coin by market cap on this date. 1 = largest."
+      - name: daily_price_id
+        description: "Surrogate key: MD5 hash of coin_id + price_date. Unique per row."
+        tests:
+          - not_null
+          - unique
 
   - name: mart_top_movers
     description: >

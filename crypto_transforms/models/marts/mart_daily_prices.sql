@@ -49,22 +49,12 @@ with_windows AS (
         avg_volume_usd,
         avg_market_cap_usd,
 
-        -- WINDOW FUNCTION 1: LAG
-        -- "What was this coin's price yesterday?"
-        -- PARTITION BY coin_id  → separate window per coin
-        -- ORDER BY price_date   → yesterday = the row before today
-        -- LAG(..., 1)           → go back exactly 1 row
-        -- The result is NULL on the first day (no prior day)
         LAG(avg_price_usd, 1)
             OVER (
                 PARTITION BY coin_id
                 ORDER BY price_date
             )                                   AS prev_day_price_usd,
 
-        -- WINDOW FUNCTION 2: Day-over-day % change
-        -- Derived from LAG — how much did price move since yesterday?
-        -- Formula: (today - yesterday) / yesterday * 100
-        -- NULLIF prevents division by zero if yesterday's price = 0
         ROUND(
             (
                 (avg_price_usd - LAG(avg_price_usd, 1) OVER (
@@ -78,11 +68,6 @@ with_windows AS (
             )::NUMERIC,
         4)                                      AS day_over_day_pct_change,
 
-        -- WINDOW FUNCTION 3: 7-day rolling average
-        -- "What is the average price over the last 7 days including today?"
-        -- ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
-        --   = current row + the 6 rows before it = 7 rows total
-        -- This smooths out daily noise to show the trend
         ROUND(
             AVG(avg_price_usd) OVER (
                 PARTITION BY coin_id
@@ -91,10 +76,6 @@ with_windows AS (
             )::NUMERIC,
         2)                                      AS rolling_7d_avg_price,
 
-        -- WINDOW FUNCTION 4: Rank by market cap on each day
-        -- "Was Bitcoin #1 on this date? Was Ethereum #2?"
-        -- PARTITION BY price_date → rank resets for each day
-        -- ORDER BY market_cap DESC → #1 = largest market cap
         RANK() OVER (
             PARTITION BY price_date
             ORDER BY avg_market_cap_usd DESC
@@ -102,7 +83,35 @@ with_windows AS (
 
     FROM daily_agg
 
+),
+
+-- New CTE: add the surrogate key using dbt_utils macro.
+-- generate_surrogate_key hashes the list of columns using MD5
+-- and returns a consistent 32-character hex string.
+-- The same coin_id + price_date always produces the same key.
+final AS (
+
+    SELECT
+        {{ dbt_utils.generate_surrogate_key(['coin_id', 'price_date']) }}
+                                                AS daily_price_id,
+        coin_id,
+        coin_name,
+        symbol,
+        price_date,
+        avg_price_usd,
+        high_price_usd,
+        low_price_usd,
+        avg_price_change_pct_24h,
+        avg_volume_usd,
+        avg_market_cap_usd,
+        prev_day_price_usd,
+        day_over_day_pct_change,
+        rolling_7d_avg_price,
+        daily_market_cap_rank
+
+    FROM with_windows
+
 )
 
-SELECT * FROM with_windows
+SELECT * FROM final
 ORDER BY price_date DESC, daily_market_cap_rank ASC
