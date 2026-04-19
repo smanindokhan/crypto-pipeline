@@ -5,4 +5,5 @@ venv/
 .DS_Store
 logs/
 crypto_transforms/dbt_packages/ 
-crypto_transforms/target/ 
+crypto_transforms/target/
+airflow/logs/ 
