@@ -1,11 +1,17 @@
 x-airflow-common: &airflow-common
   build: .
-  environment: &airflow-common-env
-    # LocalExecutor runs tasks as subprocesses in the scheduler.
-    # No Redis, no separate worker container needed.
+  environment:
+    # CeleryExecutor uses Redis to distribute tasks to workers.
+    # LocalExecutor runs tasks in the scheduler process itself — simpler
+    # but can't scale. CeleryExecutor is what production uses.
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
-    # Airflow's own internal metadata database
+
+    # Airflow's own metadata database — separate from YOUR crypto-db
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow
+
+    # Redis connection for Celery task queue
+
+    # Load example DAGs? No — they clutter the UI
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: '30'
     AIRFLOW__CORE__FERNET_KEY: 'ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pg='
@@ -45,6 +51,9 @@ services:
       start_period: 5s
     restart: always
 
+
+
+  # Webserver — the UI you interact with
   airflow-webserver:
     <<: *airflow-common
     command: webserver
@@ -71,6 +80,9 @@ services:
       start_period: 30s
     restart: always
 
+
+  # Init container — runs once on first startup to migrate
+  # Airflow's database and create the admin user. Then exits.
   airflow-init:
     <<: *airflow-common
     entrypoint: /bin/bash
