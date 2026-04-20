@@ -20,10 +20,10 @@ Every command, every file, every known error and fix — in order.
 11. [Week 9 — Writing the DAG](#11-week-9--writing-the-dag)
 12. [Week 10 — Hardening, validation, 3-day verification](#12-week-10--hardening-validation-3-day-verification)
 13. [Week 11 — Metabase dashboard](#13-week-11--metabase-dashboard)
-14. [Week 13 — Final README polish](#15-week-13--final-readme-polish)
-15. [Known errors and fixes](#16-known-errors-and-fixes)
-16. [Daily operations reference](#17-daily-operations-reference)
-17. [Connection reference](#18-connection-reference)
+14. [Week 13 — Final README polish](#14-week-13--final-readme-polish)
+15. [Known errors and fixes](#15-known-errors-and-fixes)
+16. [Daily operations reference](#16-daily-operations-reference)
+17. [Connection reference](#17-connection-reference)
 
 ---
 
