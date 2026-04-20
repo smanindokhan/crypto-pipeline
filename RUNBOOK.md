@@ -46,7 +46,7 @@ Open PowerShell as Administrator and run:
 wsl --install
 ```
 
-Restart when prompted. After restart a Ubuntu terminal opens — set a username and password.
+Restart when prompted. After restarting, a Ubuntu terminal opens — set a username and password.
 
 Verify:
 ```powershell
@@ -744,7 +744,7 @@ sources:
 Create `crypto_transforms/models/staging/stg_coin_prices.sql`:
 
 ```sql
-WITH source AS (
+WITH src AS (
     SELECT * FROM {{ source('raw', 'coin_prices') }}
 ),
 renamed AS (
@@ -758,7 +758,7 @@ renamed AS (
         price_change_pct_24h,
         fetched_at::DATE              AS price_date,
         fetched_at
-    FROM source
+    FROM src
 ),
 cleaned AS (
     SELECT * FROM renamed WHERE price_usd IS NOT NULL
@@ -771,7 +771,7 @@ SELECT * FROM cleaned
 Create `crypto_transforms/models/staging/stg_global_market.sql`:
 
 ```sql
-WITH source AS (
+WITH src AS (
     SELECT * FROM {{ source('raw', 'global_market') }}
 ),
 renamed AS (
@@ -784,7 +784,7 @@ renamed AS (
         ROUND((btc_dominance_pct + eth_dominance_pct)::NUMERIC, 2) AS btc_eth_combined_pct,
         fetched_at::DATE                    AS market_date,
         fetched_at
-    FROM source
+    FROM src
     WHERE total_market_cap_usd IS NOT NULL
 )
 SELECT * FROM renamed
