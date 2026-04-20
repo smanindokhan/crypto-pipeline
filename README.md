@@ -4,9 +4,6 @@ A production-style data pipeline that ingests live cryptocurrency data daily,
 transforms it through a layered dbt model, runs automated quality tests,
 and is orchestrated by Apache Airflow — all running on Docker.
 
-Built over 13 weeks as a deliberate portfolio project to go from
-"I've worked with pipelines" to "I built one end to end."
-
 ---
 
 ## Architecture
