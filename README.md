@@ -1,103 +1,68 @@
-# Crypto Market Data Pipeline
+<div align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/hero-dark.svg">
+  <img src="assets/hero-light.svg" alt="Crypto Market Data Pipeline" width="100%">
+</picture>
+</div>
 
-A production-style data pipeline that ingests live cryptocurrency data daily,
-transforms it through a layered dbt model, runs automated quality tests,
-and is orchestrated by Apache Airflow — all running on Docker.
+<br>
 
----
+Live crypto market data from the CoinGecko API, loaded into PostgreSQL, modelled in dbt, tested on every run, orchestrated by Airflow and served in Metabase. Everything runs locally on Docker.
 
 ## Architecture
 
-```
-CoinGecko API
-  ├── /coins/markets ──► Python ingestion ──► raw.coin_prices
-  └── /global        ──► Python ingestion ──► raw.global_market
-                                                     │
-                                           dbt staging (views)
-                                           stg_coin_prices
-                                           stg_global_market
-                                                     │
-                                           dbt marts (tables)
-                                           mart_daily_prices
-                                           mart_top_movers
-                                           mart_market_dominance
-                                                     │
-                                           Metabase dashboard
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/architecture-dark.svg">
+  <img src="assets/architecture-light.svg" alt="Architecture: CoinGecko API to Python ingestion, raw Postgres tables, dbt staging and marts, Metabase. Airflow orchestrates the daily run." width="100%">
+</picture>
 
-## Lineage graph
+## Dashboard
 
-![dbt lineage graph](images/lineage.png)
+![Metabase dashboard](images/metabase.png)
 
-## Metabase
-
-![Metabase](images/metabase.png)
-
-## Airflow
-
-![Airflow](images/airflow.png)
-
----
-
-## Stack
-
-| Layer | Technology |
-|---|---|
-| Ingestion | Python 3.12, requests, psycopg2 |
-| Storage | PostgreSQL 15 (Docker) |
-| Transformation | dbt-postgres 1.10, dbt-utils |
-| Orchestration | Apache Airflow 2.10.5 (LocalExecutor, Docker) |
-| Visualisation | Metabase (Docker) |
-| Version control | Git + GitHub |
-
----
-
-## Data sources
-
-| Source | Endpoint | Frequency | Raw table |
-|---|---|---|---|
-| CoinGecko | /coins/markets | Daily 03:30 UTC | raw.coin_prices |
-| CoinGecko | /global | Daily 03:30 UTC | raw.global_market |
-
----
-
-## dbt model layers
-
-| Model | Layer | Materialisation | Description |
-|---|---|---|---|
-| stg_coin_prices | staging | view | Cleaned coin price snapshots |
-| stg_global_market | staging | view | Cleaned global market snapshots |
-| mart_daily_prices | marts | table | Daily OHLC + 7-day rolling avg + DoD change |
-| mart_top_movers | marts | table | Top 5 gainers and losers per day |
-| mart_market_dominance | marts | table | BTC/ETH dominance trend with prices |
-
----
+<table>
+  <tr>
+    <td width="50%"><img src="images/lineage.png" alt="dbt lineage graph"><br><sub><b>dbt lineage</b>: sources to staging to marts</sub></td>
+    <td width="50%"><img src="images/airflow.png" alt="Airflow DAG run"><br><sub><b>Airflow</b>: <code>crypto_pipeline</code> DAG, daily at 03:30 UTC</sub></td>
+  </tr>
+</table>
 
 ## Data quality
 
-- 26 automated dbt tests run after every pipeline execution
-- not_null on all key columns
-- unique on surrogate keys and date columns
-- accepted_values on categorical columns
-- Custom singular tests: price always positive, dominance never exceeds 100%
-- Source freshness check: fails if no new data in 25 hours
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/quality-dark.svg">
+  <img src="assets/quality-light.svg" alt="26 dbt tests: 20 not null, 3 unique, 1 accepted values, 2 custom rules, plus source freshness" width="100%">
+</picture>
 
----
+## Stack
 
-## How to run
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/stack-dark.svg">
+  <img src="assets/stack-light.svg" alt="Python 3.12, PostgreSQL 15, dbt, Airflow 2.10.5, Docker, Metabase, CoinGecko API" width="100%">
+</picture>
 
-### Prerequisites
-- Docker Desktop (4GB+ RAM allocated)
-- Git
+## Data model
 
-### 1. Clone and configure
-```cmd
-git clone https://github.com/YOUR_USERNAME/crypto-pipeline.git
+| Layer | Models | Materialisation |
+|---|---|---|
+| Raw | `raw.coin_prices` (top 50 coins), `raw.global_market` | Python inserts |
+| Staging | `stg_coin_prices`, `stg_global_market` | view |
+| Marts | `mart_daily_prices`, `mart_top_movers`, `mart_market_dominance` | table |
+
+## Quick start
+
+**Requires** Docker, Python 3.12 and git.
+
+**1. Clone and configure**
+
+```bash
+git clone https://github.com/smanindokhan/crypto-pipeline.git
 cd crypto-pipeline
 ```
 
 Create `.env` in the project root:
-```
+
+```env
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=crypto_pipeline
@@ -105,90 +70,127 @@ DB_USER=postgres
 DB_PASSWORD=postgres
 ```
 
-### 2. Start the database
-```cmd
+**2. Start PostgreSQL and create the raw tables**
+
+```bash
 docker run --name crypto-db -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=crypto_pipeline -p 5432:5432 -d postgres:15
+docker exec -it crypto-db psql -U postgres -d crypto_pipeline
 ```
 
-### 3. Set up Python environment
-```cmd
+```sql
+CREATE SCHEMA IF NOT EXISTS raw;
+
+CREATE TABLE IF NOT EXISTS raw.coin_prices (
+    id SERIAL PRIMARY KEY,
+    coin_id VARCHAR(100) NOT NULL,
+    symbol VARCHAR(20) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    current_price NUMERIC(20, 8),
+    market_cap BIGINT,
+    total_volume BIGINT,
+    price_change_pct_24h NUMERIC(10, 4),
+    fetched_at TIMESTAMP NOT NULL,
+    UNIQUE (coin_id, fetched_at)
+);
+
+CREATE TABLE IF NOT EXISTS raw.global_market (
+    id SERIAL PRIMARY KEY,
+    total_market_cap_usd NUMERIC(24, 2),
+    total_volume_usd NUMERIC(24, 2),
+    btc_dominance_pct NUMERIC(8, 4),
+    eth_dominance_pct NUMERIC(8, 4),
+    active_coins INTEGER,
+    fetched_at TIMESTAMP NOT NULL,
+    UNIQUE (fetched_at)
+);
+```
+
+**3. Configure dbt** in `~/.dbt/profiles.yml` (on Windows `C:\Users\<you>\.dbt\profiles.yml`):
+
+```yaml
+crypto_transforms:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: localhost
+      port: 5432
+      dbname: crypto_pipeline
+      user: postgres
+      password: postgres
+      schema: public
+      threads: 1
+    docker:
+      type: postgres
+      host: host.docker.internal
+      port: 5432
+      dbname: crypto_pipeline
+      user: postgres
+      password: postgres
+      schema: public
+      threads: 1
+```
+
+**4. Install, ingest, transform, test**
+
+```bash
 python -m venv venv
-venv\Scripts\activate
+source venv/bin/activate          # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-```
 
-### 4. Run ingestion manually
-```cmd
-python main.py
-```
+python main.py                    # fetch and load; backfill: python main.py 2025-04-15
 
-### 5. Run dbt transformations
-```cmd
 cd crypto_transforms
 dbt deps
-dbt run
-dbt test
-cd ..
+dbt run --target dev
+dbt test --target dev
 ```
 
-### 6. Start Airflow (automated daily runs)
-```cmd
+**5. Orchestrate with Airflow**
+
+```bash
 cd airflow
 docker compose up airflow-init
 docker compose up -d
 ```
-Open http://localhost:8081 — login: airflow / airflow
-Unpause the `crypto_pipeline` DAG. It runs daily at 03:30 UTC.
 
-### 7. Start Metabase dashboard
-```cmd
+Open <http://localhost:8081> (`airflow` / `airflow`) and enable the `crypto_pipeline` DAG. The compose file mounts `${USERPROFILE}/.dbt`, so on macOS or Linux change that volume to `${HOME}/.dbt`.
+
+**6. Explore in Metabase**
+
+```bash
 docker run -d --name metabase -p 3000:3000 metabase/metabase
 ```
-Open http://localhost:3000 and connect to host.docker.internal:5432
 
----
+Open <http://localhost:3000> and add a PostgreSQL database with host `host.docker.internal`, port `5432`, database `crypto_pipeline`.
+
+| Service | URL |
+|---|---|
+| Airflow | http://localhost:8081 |
+| Metabase | http://localhost:3000 |
+| PostgreSQL | localhost:5432 |
+
+## Engineering decisions
+
+- **LocalExecutor, not Celery.** One machine, one daily DAG. No broker or workers to run.
+- **Idempotent loads.** Inserts use `ON CONFLICT DO NOTHING` on `(coin_id, fetched_at)`, so reruns and backfills never duplicate rows.
+- **Custom schema naming.** A `generate_schema_name` macro puts models in `staging` and `marts` instead of dbt's default prefixed schemas.
+- **Two dbt targets.** `dev` for the host, `docker` for Airflow containers reaching Postgres through `host.docker.internal`.
 
 ## Project structure
 
 ```
 crypto-pipeline/
-├── ingestion/
-│   ├── coin_prices.py       # CoinGecko /coins/markets ingestion
-│   └── global_market.py     # CoinGecko /global ingestion
-├── crypto_transforms/       # dbt project
-│   ├── models/
-│   │   ├── staging/         # stg_* views — clean raw data
-│   │   └── marts/           # mart_* tables — business logic
-│   ├── tests/               # custom singular tests
-│   └── macros/              # generate_schema_name override
-├── airflow/
-│   ├── dags/
-│   │   └── crypto_pipeline_dag.py
-│   └── docker-compose.yml   # LocalExecutor setup
-├── images/                  # screenshots for README
-├── db.py                    # shared DB connection
-├── logger.py                # shared logging setup
-└── main.py                  # pipeline entry point (manual runs)
+├── main.py                  # entry point: runs both ingestions
+├── ingest.py, ingestion/    # CoinGecko clients (coin_prices, global_market)
+├── db.py, db_setup.sql      # connection helper, database setup
+├── logger.py
+├── crypto_transforms/       # dbt project: models/staging, models/marts, tests, macros
+├── airflow/                 # docker-compose.yml, dags/crypto_pipeline_dag.py
+├── images/                  # screenshots
+├── assets/                  # README graphics
+├── RUNBOOK.md               # step-by-step build guide
+└── requirements.txt
 ```
 
----
-
-## Key engineering decisions
-
-**LocalExecutor over CeleryExecutor** — CeleryExecutor distributes tasks
-across multiple machines via Redis. For a single-machine pipeline it adds
-operational overhead with no benefit. LocalExecutor runs tasks as
-subprocesses in the scheduler — simpler, more reliable, correct for this use case.
-
-**Idempotent inserts** — `ON CONFLICT DO NOTHING` on `(coin_id, fetched_at)`
-means running the pipeline twice produces the same result as running it once.
-No duplicate rows, no defensive pre-checks needed.
-
-**dbt schema macro** — dbt's default behaviour prefixes schema names with
-the profile's base schema (`public_staging` instead of `staging`). A
-`generate_schema_name` macro overrides this so models write to exactly the
-schema declared in `dbt_project.yml`.
-
-**Two dbt targets** — `dev` uses localhost for local runs, `docker` uses
-`host.docker.internal` for runs inside the Airflow scheduler container.
-Same codebase, correct host resolution in both environments.
+<sub>Built by <a href="https://github.com/smanindokhan">Anindo Khan</a></sub>
