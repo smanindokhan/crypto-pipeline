@@ -16,24 +16,6 @@ Live crypto market data from the CoinGecko API, loaded into PostgreSQL, modelled
   <img src="assets/architecture-light.svg" alt="Architecture: CoinGecko API to Python ingestion, raw Postgres tables, dbt staging and marts, Metabase. Airflow orchestrates the daily run." width="100%">
 </picture>
 
-## Dashboard
-
-![Metabase dashboard](images/metabase.png)
-
-<table>
-  <tr>
-    <td width="50%"><img src="images/lineage.png" alt="dbt lineage graph"><br><sub><b>dbt lineage</b>: sources to staging to marts</sub></td>
-    <td width="50%"><img src="images/airflow.png" alt="Airflow DAG run"><br><sub><b>Airflow</b>: <code>crypto_pipeline</code> DAG, daily at 03:30 UTC</sub></td>
-  </tr>
-</table>
-
-## Data quality
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/quality-dark.svg">
-  <img src="assets/quality-light.svg" alt="26 dbt tests: 20 not null, 3 unique, 1 accepted values, 2 custom rules, plus source freshness" width="100%">
-</picture>
-
 ## Stack
 
 <picture>
